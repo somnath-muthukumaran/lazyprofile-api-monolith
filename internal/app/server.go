@@ -9,7 +9,7 @@ import (
 
 func New(postHandler *handlers.PostHandler) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName: "My Product CMS",
+		AppName: "Lazy Profile CMS",
 	})
 
 	// 1. Global Middleware

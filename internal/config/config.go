@@ -9,12 +9,14 @@ import (
 var appConfig *Config
 
 type Config struct {
-	AppPort int
-	DBHost  string
-	DBPort  int
-	DBUser  string
-	DBPass  string
-	DBName  string
+	AppPort                       int
+	DBHost                        string
+	DBPort                        int
+	DBUser                        string
+	DBPass                        string
+	DBName                        string
+	FirebaseCredentialsJSONBase64 string
+	FirebaseWebAPIKey             string
 }
 
 func LoadConfig() error {
@@ -38,12 +40,14 @@ func LoadConfig() error {
 	}
 
 	appConfig = &Config{
-		AppPort: appPort,
-		DBHost:  os.Getenv("DB_HOST"),
-		DBPort:  dbPort,
-		DBUser:  os.Getenv("DB_USER"),
-		DBPass:  os.Getenv("DB_PASS"),
-		DBName:  os.Getenv("DB_NAME"),
+		AppPort:                       appPort,
+		DBHost:                        os.Getenv("DB_HOST"),
+		DBPort:                        dbPort,
+		DBUser:                        os.Getenv("DB_USER"),
+		DBPass:                        os.Getenv("DB_PASS"),
+		DBName:                        os.Getenv("DB_NAME"),
+		FirebaseCredentialsJSONBase64: os.Getenv("FIREBASE_CREDENTIALS_JSON"),
+		FirebaseWebAPIKey:             os.Getenv("FIREBASE_WEB_API_KEY"),
 	}
 
 	if appConfig.DBUser == "" || appConfig.DBPass == "" || appConfig.DBName == "" {
