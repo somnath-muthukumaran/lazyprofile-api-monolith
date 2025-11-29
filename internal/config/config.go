@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 var appConfig *Config
@@ -15,6 +16,10 @@ type Config struct {
 	DBUser                        string
 	DBPass                        string
 	DBName                        string
+	DBMaxConns                    int32
+	DBMinConns                    int32
+	DBMaxConnLifetime             time.Duration
+	DBMaxConnIdleTime             time.Duration
 	FirebaseCredentialsJSONBase64 string
 	FirebaseWebAPIKey             string
 }
@@ -48,6 +53,10 @@ func LoadConfig() error {
 		DBName:                        os.Getenv("DB_NAME"),
 		FirebaseCredentialsJSONBase64: os.Getenv("FIREBASE_CREDENTIALS_JSON"),
 		FirebaseWebAPIKey:             os.Getenv("FIREBASE_WEB_API_KEY"),
+		DBMaxConns:                    6,
+		DBMinConns:                    2,
+		DBMaxConnLifetime:             time.Hour,
+		DBMaxConnIdleTime:             30 * time.Minute,
 	}
 
 	if appConfig.DBUser == "" || appConfig.DBPass == "" || appConfig.DBName == "" {

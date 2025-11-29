@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	"github.com/somnath-muthukumaran/lazyprofile/internal/app"
 	"github.com/somnath-muthukumaran/lazyprofile/internal/config"
+	"github.com/somnath-muthukumaran/lazyprofile/internal/handlers"
+	"github.com/somnath-muthukumaran/lazyprofile/pkg/database"
+	"github.com/somnath-muthukumaran/lazyprofile/pkg/firebaseclient"
 )
 
 func init() {
@@ -16,23 +19,34 @@ func init() {
 }
 
 func main() {
-
 	if err := config.LoadConfig(); err != nil {
 		log.Fatalf("❌ Configuration error: %v", err)
 	}
-
 	cfg := config.GetConfig()
+	fmt.Printf("✅ Config loaded")
 
-	fmt.Printf("✅ Config loaded. App Port: %d, DB Host: %s\n", cfg.AppPort, cfg.DBHost)
-	app := fiber.New()
+	if err := firebaseclient.InitFirebase(cfg); err != nil {
+		log.Fatalf("❌ Failed to initialize firebase error: %v", err)
+	}
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
+	pool, err := database.ConnectPostgres(cfg)
+	if err != nil {
+		log.Fatalf("Could not connect to database: %v", err)
+	}
+	defer pool.Close()
+	// queries := db.New(pool)
 
+	postHandler := handlers.NewPostHandler( /* postService */ )
+
+	handlersContainer := &app.Handlers{
+		PostHandler: postHandler,
+	}
+
+	application := app.New(handlersContainer)
 	listenAddr := fmt.Sprintf(":%d", cfg.AppPort)
 	log.Printf("🚀 Fiber server starting on %s", listenAddr)
-	if err := app.Listen(listenAddr); err != nil {
+
+	if err := application.Listen(listenAddr); err != nil {
 		fmt.Printf("Fatal error starting server: %v\n", err)
 	}
 }

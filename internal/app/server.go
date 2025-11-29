@@ -7,31 +7,30 @@ import (
 	"github.com/somnath-muthukumaran/lazyprofile/internal/handlers"
 )
 
-func New(postHandler *handlers.PostHandler) *fiber.App {
+type Handlers struct {
+	PostHandler *handlers.PostHandler
+}
+
+func New(h *Handlers) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName: "Lazy Profile CMS",
 	})
 
-	// 1. Global Middleware
-	app.Use(recover.New()) // Prevents crashes
-	app.Use(logger.New())  // Logs requests
-
-	// 2. Setup Routes
-	setupRoutes(app, postHandler)
+	app.Use(recover.New())
+	app.Use(logger.New())
+	setupRoutes(app, h)
 
 	return app
 }
 
-func setupRoutes(app *fiber.App, postHandler *handlers.PostHandler) {
+func setupRoutes(app *fiber.App, h *Handlers) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok"})
 	})
 
-	// API Group
 	api := app.Group("/api/v1")
 
-	// Post Domain Routes
 	posts := api.Group("/posts")
-	posts.Post("/", postHandler.Create)
-	posts.Get("/:id", postHandler.GetByID)
+	posts.Post("/", h.PostHandler.Create)
+	posts.Get("/:id", h.PostHandler.GetByID)
 }

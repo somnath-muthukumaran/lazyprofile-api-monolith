@@ -5,13 +5,10 @@ import (
 )
 
 type PostHandler struct {
-	// Add dependencies here, e.g., PostService service.PostService
 }
 
 func NewPostHandler( /* dependencies go here */ ) *PostHandler {
-	return &PostHandler{
-		// Initialize dependencies here
-	}
+	return &PostHandler{}
 }
 
 func (h *PostHandler) Create(c *fiber.Ctx) error {

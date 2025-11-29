@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/somnath-muthukumaran/lazyprofile/internal/config"
+	"github.com/somnath-muthukumaran/lazyprofile/pkg/firebaseclient"
 )
 
 func AuthMiddleware(c *fiber.Ctx) error {
@@ -23,7 +23,7 @@ func AuthMiddleware(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := config.AuthClient.VerifyIDToken(context.Background(), idToken)
+	token, err := firebaseclient.AuthClient.VerifyIDToken(context.Background(), idToken)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid or expired token",

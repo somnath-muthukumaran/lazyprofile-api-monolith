@@ -1,4 +1,4 @@
-package config
+package firebaseclient
 
 import (
 	"context"
@@ -7,21 +7,21 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
+	"github.com/somnath-muthukumaran/lazyprofile/internal/config"
 	"google.golang.org/api/option"
 )
 
 var FirebaseApp *firebase.App
 var AuthClient *auth.Client
 
-func InitFirebase() error {
+func InitFirebase(cfg config.Config) error {
 
 	ctx := context.Background()
-	appConstants := GetConfig()
-	if appConstants.FirebaseCredentialsJSONBase64 == "" {
+	if cfg.FirebaseCredentialsJSONBase64 == "" {
 		return fmt.Errorf("FIREBASE_CREDENTIALS_JSON environment variable is not set")
 	}
 
-	credsJSON, err := base64.StdEncoding.DecodeString(appConstants.FirebaseCredentialsJSONBase64)
+	credsJSON, err := base64.StdEncoding.DecodeString(cfg.FirebaseCredentialsJSONBase64)
 	if err != nil {
 		return fmt.Errorf("failed to decode firebase credentials: %v", err)
 	}
@@ -38,6 +38,6 @@ func InitFirebase() error {
 		return fmt.Errorf("error getting Auth client: %v", err)
 	}
 	AuthClient = client
-
+	fmt.Println("Firebase initialized successfully !")
 	return nil
 }
