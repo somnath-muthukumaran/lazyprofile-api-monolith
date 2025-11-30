@@ -1,0 +1,331 @@
+// Enums
+Enum contentStatus {
+  Draft
+  Published
+  Archived
+}
+
+Enum socialPlatform {
+  LinkedIn
+  Twitter
+  Facebook
+  Instagram
+  YouTube
+  Pinterest
+  TikTok
+  Behance
+  Dribbble
+  GitHub
+  Medium
+  DevTo
+  StackOverflow
+  Twitch
+  Discord
+}
+
+// --- 1. USERS & PROFILE (MERGED) ---
+Table users {
+  id bigserial [pk]
+  
+  // Firebase Auth fields
+  firebaseUid varchar [unique, not null, note: 'Firebase Auth UID']
+  email varchar [unique, not null]
+  displayName varchar [note: 'From Firebase Auth, can be overridden']
+  photoUrl varchar [note: 'From Firebase Auth, can be overridden']
+  
+  // Profile/About fields (all nullable - filled during onboarding)
+  firstName varchar [null]
+  lastName varchar [null]
+  profilePicture varchar [null, note: 'Custom profile pic, overrides photoUrl']
+  shortBio varchar(255) [null]
+  fullBio text [null]
+  resumeUrl varchar [null]
+  
+  // Metadata
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (firebaseUid, isDeleted) [unique]
+    (email, isDeleted)
+  }
+}
+
+// --- 2. API & SECURITY ---
+Table apiConfigs {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  apiKey varchar [unique, not null]
+  allowedOrigins text [note: 'JSON array or comma-separated']
+  isActive boolean [default: true]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  deletedAt timestamp [null]
+}
+
+// --- 3. CONTACT INFO (NORMALIZED) ---
+Table contactInfo {
+  id bigserial [pk]
+  userId bigint [unique, ref: - users.id]
+  email varchar
+  phone varchar
+  address varchar
+  city varchar
+  state varchar
+  zip varchar
+  country varchar
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+}
+
+// Social Links - Normalized (can add unlimited platforms)
+Table socialLinks {
+  id bigserial [pk]
+  userId bigint [ref: > users.id, not null]
+  platform socialPlatform [not null]
+  url varchar [not null]
+  displayOrder int [default: 0]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (userId, platform, isDeleted) [unique, note: 'One link per platform per user']
+    (userId, displayOrder, isDeleted)
+  }
+}
+
+// --- 4. CATEGORIES ---
+
+// Project Categories - Normalized
+Table projectCategories {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  name varchar [not null]
+  slug varchar [not null]
+  description text
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (slug, userId, isDeleted) [unique]
+  }
+}
+
+// Skill Categories - Normalized
+Table skillCategories {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  name varchar [not null]
+  displayOrder int [default: 0]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+}
+
+// --- 5. PROJECTS (DENORMALIZED for performance) ---
+Table projects {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  categoryId bigint [ref: > projectCategories.id]
+  
+  title varchar [not null]
+  slug varchar [not null]
+  shortDescription varchar(255)
+  fullDescription text
+  coverImage varchar
+  status contentStatus [default: 'Draft']
+  liveUrl varchar
+  githubUrl varchar
+  displayOrder int [default: 0]
+  isFeatured boolean [default: false]
+  
+  // DENORMALIZED: Counts for performance (avoid JOINs on list views)
+  imageCount int [default: 0, note: 'Denormalized count']
+  tagCount int [default: 0, note: 'Denormalized count']
+  
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (slug, userId, isDeleted) [unique]
+    (userId, isFeatured, isDeleted)
+    (userId, status, isDeleted)
+  }
+}
+
+// Project Images - Normalized (multiple images per project)
+Table projectImages {
+  id bigserial [pk]
+  projectId bigint [ref: > projects.id, not null]
+  imageUrl varchar [not null]
+  caption varchar(255)
+  displayOrder int [default: 0]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  deletedAt timestamp [null]
+  
+  indexes {
+    (projectId, displayOrder, isDeleted)
+  }
+}
+
+// Tags - Normalized (global, reusable across users)
+Table tags {
+  id bigserial [pk]
+  name varchar [unique, not null]
+  slug varchar [unique, not null]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  deletedAt timestamp [null]
+}
+
+// Project Tags Junction
+Table projectTags {
+  projectId bigint [ref: > projects.id, not null]
+  tagId bigint [ref: > tags.id, not null]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  deletedAt timestamp [null]
+  
+  primary key (projectId, tagId)
+  
+  indexes {
+    (projectId, isDeleted)
+    (tagId, isDeleted)
+  }
+}
+
+// --- 6. SKILLS (DENORMALIZED for performance) ---
+Table skills {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  categoryId bigint [ref: > skillCategories.id]
+  
+  name varchar [not null]
+  proficiency int [note: 'Scale of 1-100']
+  icon varchar
+  status contentStatus [default: 'Draft']
+  displayOrder int [default: 0]
+  
+  // DENORMALIZED: Usage count for "top skills"
+  usageCount int [default: 0, note: 'How many projects/experiences use this']
+  
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (userId, categoryId, isDeleted)
+    (userId, usageCount, isDeleted) [note: 'Query top skills']
+  }
+}
+
+// --- 7. EXPERIENCE (DENORMALIZED for display) ---
+Table experience {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  companyName varchar [not null]
+  companyLogo varchar
+  position varchar [not null]
+  startDate date [not null]
+  endDate date
+  isCurrentlyWorking boolean [default: false]
+  description text
+  location varchar
+  status contentStatus [default: 'Draft']
+  displayOrder int [default: 0]
+  
+  // DENORMALIZED: Duration in months (calculated on save)
+  durationMonths int [note: 'Denormalized for sorting/filtering']
+  
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (userId, isDeleted, startDate)
+    (userId, isCurrentlyWorking, isDeleted)
+  }
+}
+
+// Experience Skills Junction
+Table experienceSkills {
+  experienceId bigint [ref: > experience.id, not null]
+  skillId bigint [ref: > skills.id, not null]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  deletedAt timestamp [null]
+  
+  primary key (experienceId, skillId)
+  
+  indexes {
+    (experienceId, isDeleted)
+    (skillId, isDeleted)
+  }
+}
+
+// --- 8. EDUCATION (DENORMALIZED for display) ---
+Table education {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  institutionName varchar [not null]
+  institutionLogo varchar
+  degree varchar [not null]
+  fieldOfStudy varchar
+  startDate date [not null]
+  endDate date
+  isCurrentlyStudying boolean [default: false]
+  description text
+  status contentStatus [default: 'Draft']
+  displayOrder int [default: 0]
+  
+  // DENORMALIZED: Duration in years (calculated on save)
+  durationYears int [note: 'Denormalized for display']
+  
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (userId, isDeleted, startDate)
+    (userId, isCurrentlyStudying, isDeleted)
+  }
+}
+
+// --- 9. TESTIMONIALS (NEW - Often needed for portfolios) ---
+Table testimonials {
+  id bigserial [pk]
+  userId bigint [ref: > users.id]
+  clientName varchar [not null]
+  clientPosition varchar
+  clientCompany varchar
+  clientPhoto varchar
+  content text [not null]
+  rating int [note: '1-5 stars']
+  projectId bigint [ref: > projects.id, null, note: 'Optional link to project']
+  status contentStatus [default: 'Draft']
+  displayOrder int [default: 0]
+  isDeleted boolean [default: false]
+  createdAt timestamp [default: `now()`]
+  updatedAt timestamp
+  deletedAt timestamp [null]
+  
+  indexes {
+    (userId, status, isDeleted)
+    (projectId, isDeleted)
+  }
+}

@@ -460,3 +460,6 @@ CREATE TRIGGER set_education_deleted_at BEFORE UPDATE ON education
 
 CREATE TRIGGER set_testimonials_deleted_at BEFORE UPDATE ON testimonials
   FOR EACH ROW EXECUTE FUNCTION set_deleted_at_column();
+
+
+psql "postgresql://userName:password@host/dbName" -f migrations/000001_init.up.sql
