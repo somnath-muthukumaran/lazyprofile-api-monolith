@@ -8,4 +8,55 @@ sql:
         package: "db"
         out: "internal/db"
         sql_package: "pgx/v5"
+        
+        # JSON tags for easy API responses
         emit_json_tags: true
+        
+        # DB tags for scanning
+        emit_db_tags: true
+        
+        # Generate empty slices instead of nil for arrays
+        emit_empty_slices: true
+        
+        # Use pointers for nullable database columns
+        emit_pointers_for_null_types: true
+        
+        # Generate an interface for easier mocking in tests
+        emit_interface: true
+        
+        # Don't use prepared statements (better for connection pooling)
+        emit_prepared_queries: false
+        
+        # Add methods to generated structs
+        emit_methods_with_db_argument: false
+        
+        # Custom type overrides for better Go types
+        overrides:
+          # Use time.Time for timestamptz
+          - db_type: "timestamptz"
+            go_type: 
+              import: "time"
+              type: "Time"
+          
+          # Use custom types for enums (optional - you can keep as string)
+          - db_type: "content_status"
+            go_type: "string"
+          
+          - db_type: "social_platform"
+            go_type: "string"
+          
+          # If you want to use sql.NullString for nullable text fields
+          # Uncomment these if you prefer sql.Null* types over pointers
+          # - column: "users.first_name"
+          #   go_type: 
+          #     import: "database/sql"
+          #     type: "NullString"
+          
+        # Rename generated types if needed (optional)
+        rename:
+          # Rename API config to avoid stutter
+          api_configs: "APIConfig"
+          
+          # Better names for junction tables
+          project_tags: "ProjectTag"
+          experience_skills: "ExperienceSkill"

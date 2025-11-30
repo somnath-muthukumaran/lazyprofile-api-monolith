@@ -4,8 +4,334 @@
 
 package db
 
+import (
+	"database/sql/driver"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+type ContentStatus string
+
+const (
+	ContentStatusDraft     ContentStatus = "draft"
+	ContentStatusPublished ContentStatus = "published"
+	ContentStatusArchived  ContentStatus = "archived"
+)
+
+func (e *ContentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContentStatus(s)
+	case string:
+		*e = ContentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullContentStatus struct {
+	ContentStatus ContentStatus `json:"content_status"`
+	Valid         bool          `json:"valid"` // Valid is true if ContentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContentStatus), nil
+}
+
+type SocialPlatform string
+
+const (
+	SocialPlatformLinkedin      SocialPlatform = "linkedin"
+	SocialPlatformTwitter       SocialPlatform = "twitter"
+	SocialPlatformFacebook      SocialPlatform = "facebook"
+	SocialPlatformInstagram     SocialPlatform = "instagram"
+	SocialPlatformYoutube       SocialPlatform = "youtube"
+	SocialPlatformPinterest     SocialPlatform = "pinterest"
+	SocialPlatformTiktok        SocialPlatform = "tiktok"
+	SocialPlatformBehance       SocialPlatform = "behance"
+	SocialPlatformDribbble      SocialPlatform = "dribbble"
+	SocialPlatformGithub        SocialPlatform = "github"
+	SocialPlatformMedium        SocialPlatform = "medium"
+	SocialPlatformDevto         SocialPlatform = "devto"
+	SocialPlatformStackoverflow SocialPlatform = "stackoverflow"
+	SocialPlatformTwitch        SocialPlatform = "twitch"
+	SocialPlatformDiscord       SocialPlatform = "discord"
+)
+
+func (e *SocialPlatform) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SocialPlatform(s)
+	case string:
+		*e = SocialPlatform(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SocialPlatform: %T", src)
+	}
+	return nil
+}
+
+type NullSocialPlatform struct {
+	SocialPlatform SocialPlatform `json:"social_platform"`
+	Valid          bool           `json:"valid"` // Valid is true if SocialPlatform is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSocialPlatform) Scan(value interface{}) error {
+	if value == nil {
+		ns.SocialPlatform, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SocialPlatform.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSocialPlatform) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SocialPlatform), nil
+}
+
+type ApiConfig struct {
+	ID     int64  `db:"id" json:"id"`
+	UserID int64  `db:"user_id" json:"user_id"`
+	ApiKey string `db:"api_key" json:"api_key"`
+	// JSON array or comma-separated list of allowed origins
+	AllowedOrigins *string            `db:"allowed_origins" json:"allowed_origins"`
+	IsActive       bool               `db:"is_active" json:"is_active"`
+	IsDeleted      bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt      time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type ContactInfo struct {
+	ID        int64              `db:"id" json:"id"`
+	UserID    int64              `db:"user_id" json:"user_id"`
+	Email     *string            `db:"email" json:"email"`
+	Phone     *string            `db:"phone" json:"phone"`
+	Address   *string            `db:"address" json:"address"`
+	City      *string            `db:"city" json:"city"`
+	State     *string            `db:"state" json:"state"`
+	Zip       *string            `db:"zip" json:"zip"`
+	Country   *string            `db:"country" json:"country"`
+	IsDeleted bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Education struct {
+	ID                  int64       `db:"id" json:"id"`
+	UserID              int64       `db:"user_id" json:"user_id"`
+	InstitutionName     string      `db:"institution_name" json:"institution_name"`
+	InstitutionLogo     *string     `db:"institution_logo" json:"institution_logo"`
+	Degree              string      `db:"degree" json:"degree"`
+	FieldOfStudy        *string     `db:"field_of_study" json:"field_of_study"`
+	StartDate           pgtype.Date `db:"start_date" json:"start_date"`
+	EndDate             pgtype.Date `db:"end_date" json:"end_date"`
+	IsCurrentlyStudying bool        `db:"is_currently_studying" json:"is_currently_studying"`
+	Description         *string     `db:"description" json:"description"`
+	Status              string      `db:"status" json:"status"`
+	DisplayOrder        int32       `db:"display_order" json:"display_order"`
+	// Denormalized for display - calculated on save
+	DurationYears *int32             `db:"duration_years" json:"duration_years"`
+	IsDeleted     bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt     time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt     pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Experience struct {
+	ID                 int64       `db:"id" json:"id"`
+	UserID             int64       `db:"user_id" json:"user_id"`
+	CompanyName        string      `db:"company_name" json:"company_name"`
+	CompanyLogo        *string     `db:"company_logo" json:"company_logo"`
+	Position           string      `db:"position" json:"position"`
+	StartDate          pgtype.Date `db:"start_date" json:"start_date"`
+	EndDate            pgtype.Date `db:"end_date" json:"end_date"`
+	IsCurrentlyWorking bool        `db:"is_currently_working" json:"is_currently_working"`
+	Description        *string     `db:"description" json:"description"`
+	Location           *string     `db:"location" json:"location"`
+	Status             string      `db:"status" json:"status"`
+	DisplayOrder       int32       `db:"display_order" json:"display_order"`
+	// Denormalized for sorting/filtering - calculated on save
+	DurationMonths *int32             `db:"duration_months" json:"duration_months"`
+	IsDeleted      bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt      time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type ExperienceSkill struct {
+	ExperienceID int64              `db:"experience_id" json:"experience_id"`
+	SkillID      int64              `db:"skill_id" json:"skill_id"`
+	IsDeleted    bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt    time.Time          `db:"created_at" json:"created_at"`
+	DeletedAt    pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Project struct {
+	ID               int64   `db:"id" json:"id"`
+	UserID           int64   `db:"user_id" json:"user_id"`
+	CategoryID       *int64  `db:"category_id" json:"category_id"`
+	Title            string  `db:"title" json:"title"`
+	Slug             string  `db:"slug" json:"slug"`
+	ShortDescription *string `db:"short_description" json:"short_description"`
+	FullDescription  *string `db:"full_description" json:"full_description"`
+	CoverImage       *string `db:"cover_image" json:"cover_image"`
+	Status           string  `db:"status" json:"status"`
+	LiveUrl          *string `db:"live_url" json:"live_url"`
+	GithubUrl        *string `db:"github_url" json:"github_url"`
+	DisplayOrder     int32   `db:"display_order" json:"display_order"`
+	IsFeatured       bool    `db:"is_featured" json:"is_featured"`
+	// Denormalized count - updated via triggers or app logic
+	ImageCount int32 `db:"image_count" json:"image_count"`
+	// Denormalized count - updated via triggers or app logic
+	TagCount  int32              `db:"tag_count" json:"tag_count"`
+	IsDeleted bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type ProjectCategory struct {
+	ID          int64              `db:"id" json:"id"`
+	UserID      int64              `db:"user_id" json:"user_id"`
+	Name        string             `db:"name" json:"name"`
+	Slug        string             `db:"slug" json:"slug"`
+	Description *string            `db:"description" json:"description"`
+	IsDeleted   bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt   time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type ProjectImage struct {
+	ID           int64              `db:"id" json:"id"`
+	ProjectID    int64              `db:"project_id" json:"project_id"`
+	ImageUrl     string             `db:"image_url" json:"image_url"`
+	Caption      *string            `db:"caption" json:"caption"`
+	DisplayOrder int32              `db:"display_order" json:"display_order"`
+	IsDeleted    bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt    time.Time          `db:"created_at" json:"created_at"`
+	DeletedAt    pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type ProjectTag struct {
+	ProjectID int64              `db:"project_id" json:"project_id"`
+	TagID     int64              `db:"tag_id" json:"tag_id"`
+	IsDeleted bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt time.Time          `db:"created_at" json:"created_at"`
+	DeletedAt pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Skill struct {
+	ID         int64  `db:"id" json:"id"`
+	UserID     int64  `db:"user_id" json:"user_id"`
+	CategoryID *int64 `db:"category_id" json:"category_id"`
+	Name       string `db:"name" json:"name"`
+	// Scale of 0-100
+	Proficiency  *int32  `db:"proficiency" json:"proficiency"`
+	Icon         *string `db:"icon" json:"icon"`
+	Status       string  `db:"status" json:"status"`
+	DisplayOrder int32   `db:"display_order" json:"display_order"`
+	// How many projects/experiences use this skill
+	UsageCount int32              `db:"usage_count" json:"usage_count"`
+	IsDeleted  bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt  time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt  pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type SkillCategory struct {
+	ID           int64              `db:"id" json:"id"`
+	UserID       int64              `db:"user_id" json:"user_id"`
+	Name         string             `db:"name" json:"name"`
+	DisplayOrder int32              `db:"display_order" json:"display_order"`
+	IsDeleted    bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt    time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type SocialLink struct {
+	ID           int64              `db:"id" json:"id"`
+	UserID       int64              `db:"user_id" json:"user_id"`
+	Platform     string             `db:"platform" json:"platform"`
+	Url          string             `db:"url" json:"url"`
+	DisplayOrder int32              `db:"display_order" json:"display_order"`
+	IsDeleted    bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt    time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Tag struct {
+	ID        int64              `db:"id" json:"id"`
+	Name      string             `db:"name" json:"name"`
+	Slug      string             `db:"slug" json:"slug"`
+	IsDeleted bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt time.Time          `db:"created_at" json:"created_at"`
+	DeletedAt pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
+type Testimonial struct {
+	ID             int64   `db:"id" json:"id"`
+	UserID         int64   `db:"user_id" json:"user_id"`
+	ClientName     string  `db:"client_name" json:"client_name"`
+	ClientPosition *string `db:"client_position" json:"client_position"`
+	ClientCompany  *string `db:"client_company" json:"client_company"`
+	ClientPhoto    *string `db:"client_photo" json:"client_photo"`
+	Content        string  `db:"content" json:"content"`
+	// 1-5 stars rating
+	Rating *int32 `db:"rating" json:"rating"`
+	// Optional link to specific project
+	ProjectID    *int64             `db:"project_id" json:"project_id"`
+	Status       string             `db:"status" json:"status"`
+	DisplayOrder int32              `db:"display_order" json:"display_order"`
+	IsDeleted    bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt    time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
+}
+
 type User struct {
-	ID          int64  `json:"id"`
-	Email       string `json:"email"`
-	Preferences []byte `json:"preferences"`
+	ID int64 `db:"id" json:"id"`
+	// Firebase Auth UID - primary identifier
+	FirebaseUid string `db:"firebase_uid" json:"firebase_uid"`
+	Email       string `db:"email" json:"email"`
+	// From Firebase Auth, can be overridden
+	DisplayName *string `db:"display_name" json:"display_name"`
+	// From Firebase Auth profile picture
+	PhotoUrl  *string `db:"photo_url" json:"photo_url"`
+	FirstName *string `db:"first_name" json:"first_name"`
+	LastName  *string `db:"last_name" json:"last_name"`
+	// Custom profile pic URL, overrides photo_url
+	ProfilePicture *string            `db:"profile_picture" json:"profile_picture"`
+	ShortBio       *string            `db:"short_bio" json:"short_bio"`
+	FullBio        *string            `db:"full_bio" json:"full_bio"`
+	ResumeUrl      *string            `db:"resume_url" json:"resume_url"`
+	IsDeleted      bool               `db:"is_deleted" json:"is_deleted"`
+	CreatedAt      time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `db:"deleted_at" json:"deleted_at"`
 }

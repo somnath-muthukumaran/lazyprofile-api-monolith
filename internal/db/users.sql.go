@@ -9,13 +9,212 @@ import (
 	"context"
 )
 
-const getUser = `-- name: GetUser :one
-SELECT id, email, preferences FROM users WHERE id = $1
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+  firebase_uid, 
+  email, 
+  display_name, 
+  photo_url
+) VALUES (
+  $1, $2, $3, $4
+)
+RETURNING id, firebase_uid, email, display_name, photo_url, first_name, last_name, profile_picture, short_bio, full_bio, resume_url, is_deleted, created_at, updated_at, deleted_at
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
+type CreateUserParams struct {
+	FirebaseUid string  `db:"firebase_uid" json:"firebase_uid"`
+	Email       string  `db:"email" json:"email"`
+	DisplayName *string `db:"display_name" json:"display_name"`
+	PhotoUrl    *string `db:"photo_url" json:"photo_url"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.FirebaseUid,
+		arg.Email,
+		arg.DisplayName,
+		arg.PhotoUrl,
+	)
 	var i User
-	err := row.Scan(&i.ID, &i.Email, &i.Preferences)
+	err := row.Scan(
+		&i.ID,
+		&i.FirebaseUid,
+		&i.Email,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.FirstName,
+		&i.LastName,
+		&i.ProfilePicture,
+		&i.ShortBio,
+		&i.FullBio,
+		&i.ResumeUrl,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, firebase_uid, email, display_name, photo_url, first_name, last_name, profile_picture, short_bio, full_bio, resume_url, is_deleted, created_at, updated_at, deleted_at FROM users
+WHERE email = $1 AND is_deleted = false
+LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FirebaseUid,
+		&i.Email,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.FirstName,
+		&i.LastName,
+		&i.ProfilePicture,
+		&i.ShortBio,
+		&i.FullBio,
+		&i.ResumeUrl,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByFirebaseUID = `-- name: GetUserByFirebaseUID :one
+SELECT id, firebase_uid, email, display_name, photo_url, first_name, last_name, profile_picture, short_bio, full_bio, resume_url, is_deleted, created_at, updated_at, deleted_at FROM users
+WHERE firebase_uid = $1 AND is_deleted = false
+LIMIT 1
+`
+
+func (q *Queries) GetUserByFirebaseUID(ctx context.Context, firebaseUid string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByFirebaseUID, firebaseUid)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FirebaseUid,
+		&i.Email,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.FirstName,
+		&i.LastName,
+		&i.ProfilePicture,
+		&i.ShortBio,
+		&i.FullBio,
+		&i.ResumeUrl,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, firebase_uid, email, display_name, photo_url, first_name, last_name, profile_picture, short_bio, full_bio, resume_url, is_deleted, created_at, updated_at, deleted_at FROM users
+WHERE id = $1 AND is_deleted = false
+LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FirebaseUid,
+		&i.Email,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.FirstName,
+		&i.LastName,
+		&i.ProfilePicture,
+		&i.ShortBio,
+		&i.FullBio,
+		&i.ResumeUrl,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const restoreUser = `-- name: RestoreUser :exec
+UPDATE users
+SET is_deleted = false, deleted_at = NULL
+WHERE id = $1
+`
+
+func (q *Queries) RestoreUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, restoreUser, id)
+	return err
+}
+
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+UPDATE users
+SET is_deleted = true
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+UPDATE users
+SET 
+  first_name = COALESCE($1, first_name),
+  last_name = COALESCE($2, last_name),
+  profile_picture = COALESCE($3, profile_picture),
+  short_bio = COALESCE($4, short_bio),
+  full_bio = COALESCE($5, full_bio),
+  resume_url = COALESCE($6, resume_url)
+WHERE id = $7 AND is_deleted = false
+RETURNING id, firebase_uid, email, display_name, photo_url, first_name, last_name, profile_picture, short_bio, full_bio, resume_url, is_deleted, created_at, updated_at, deleted_at
+`
+
+type UpdateUserProfileParams struct {
+	FirstName      *string `db:"first_name" json:"first_name"`
+	LastName       *string `db:"last_name" json:"last_name"`
+	ProfilePicture *string `db:"profile_picture" json:"profile_picture"`
+	ShortBio       *string `db:"short_bio" json:"short_bio"`
+	FullBio        *string `db:"full_bio" json:"full_bio"`
+	ResumeUrl      *string `db:"resume_url" json:"resume_url"`
+	ID             int64   `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserProfile,
+		arg.FirstName,
+		arg.LastName,
+		arg.ProfilePicture,
+		arg.ShortBio,
+		arg.FullBio,
+		arg.ResumeUrl,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FirebaseUid,
+		&i.Email,
+		&i.DisplayName,
+		&i.PhotoUrl,
+		&i.FirstName,
+		&i.LastName,
+		&i.ProfilePicture,
+		&i.ShortBio,
+		&i.FullBio,
+		&i.ResumeUrl,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
 	return i, err
 }
